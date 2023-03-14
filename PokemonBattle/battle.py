@@ -9,6 +9,15 @@ class Pokemon():
         self.moves = moves
         self.random = moves[-1][0] # 0 if random
         self.index = stats[0]
+        self.typing = []
+        if self.index == '1':
+            self.typing = [["Fire"], ["Fighting"]]
+        elif self.index == '2':
+            self.typing = [["Grass"], ["Ground"]]
+        elif self.index == '3':
+            self.typing = [["Water"], ["Steel"]]
+        else:
+            self.typing = [["Dragon"], ["Ground"]]
         self.name = stats[1]
         self.max_hp=int(stats[2])
         self.current_hp = int(stats[2])
@@ -114,8 +123,12 @@ class BattleScreen(BattleMenu):
                 rand_dmg_1 = random.randint(20, 100)
                 rand_dmg_2 = random.randint(20, 100)
 
+                calc_dmg_on_p1 = self.calculatedDMG(self.attacking_move[2], self.p2, self.p1)
+                calc_dmg_on_p2 = self.calculatedDMG(self.attacking_move[1], self.p1, self.p2)
+
+
                 print("P1 new way:", [int(curr_hp[0][0])-20])
-                rowb= [[int(curr_hp[0][0])-rand_dmg_1],[int(curr_hp[1][0])-rand_dmg_2]]
+                rowb= [[int(curr_hp[0][0])-calc_dmg_on_p1],[int(curr_hp[1][0])-calc_dmg_on_p2]]
                 with open('Pokemon Metadata\\curr_hp.csv', 'w', newline='') as file1:
                     writera = csv.writer(file1)
                     print("rows: ", rowb)
@@ -374,7 +387,63 @@ class BattleScreen(BattleMenu):
                 self.window.insert_text(move_name, font_size, 135+counter*(self.movebox_width+35), 553, self.window.white)
 
             counter+=1
-            
+
+    def calculatedDMG(self, move, attacking_pkm, defending_pkm):
+        move_typing = move[2]
+        move_property = move[3]
+        move_power = float(move[4])
+        move_acc = move[5]
+        
+        # does the move hit?
+        acc_check=random.randint(0, 100)
+        try:
+            if acc_check > int(move_acc):
+                return 0
+        except ValueError:
+            pass
+        # time to check dmg
+        if move_property == 'Physical':
+            def_power = int(defending_pkm.defense)
+            atk_power = int(attacking_pkm.atk)
+        else:
+            def_power = int(defending_pkm.sdef)
+            atk_power = int(attacking_pkm.satk)
+
+        type_csv = open('Pokemon Metadata\\type_effectiveness.csv', 'r')
+        type_eff = list(csv.reader(type_csv, delimiter=","))
+        type_csv.close()
+
+        # print("type_ef {}", type_eff)
+        col_num = 0
+        for col in type_eff[0]:
+            if col == move_typing:
+                break
+            col_num += 1
+        
+        o=0
+        for row in type_eff:
+            if defending_pkm.typing == [[row[0]], [row[1]]]:
+                o=row
+                effectiveness = float(row[col_num])
+        
+        print("col type: {}, row: {}, effectiveness: {}".format( type_eff[0][col_num], o, effectiveness))
+
+        #checks for stab
+        if [move_typing] in attacking_pkm.typing:
+            is_STAB = 1.5
+        else:
+            is_STAB = 1
+
+        modifier = random.randint(85, 100)/100
+        # dmg = float(float((2*100/5 +2)*float(move_power*float((atk_power//def_power)))//50)*effectiveness*is_STAB)
+        dmg = int(((((2*100/5 +2)*move_power*atk_power/def_power)/50)*effectiveness*is_STAB*modifier))
+        print (dmg)
+        return dmg
+
+        
+        
+
+
     def check_menu_input(self):
         '''
         changes screens based on the state it is in when a 'enter' key is pressed
